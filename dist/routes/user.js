@@ -8,12 +8,20 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.userRouter = void 0;
 const express_1 = require("express");
 exports.userRouter = (0, express_1.Router)();
 const zod_1 = require("zod");
 const client_1 = require("@prisma/client");
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const dotenv_1 = require("dotenv");
+const generate_api_key_1 = require("generate-api-key");
+const userMiddleware_1 = require("../middlewares/userMiddleware");
+(0, dotenv_1.configDotenv)();
 const prisma = new client_1.PrismaClient();
 const signupSchema = zod_1.z.object({
     name: zod_1.z.string().min(4).max(20),
@@ -74,7 +82,7 @@ exports.userRouter.post('/signup', (req, res) => __awaiter(void 0, void 0, void 
         });
     }
 }));
-exports.userRouter.post('/signup', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.userRouter.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const parsedSchema = signinSchema.parse(req.body);
         const { email, password } = parsedSchema;
@@ -95,14 +103,19 @@ exports.userRouter.post('/signup', (req, res) => __awaiter(void 0, void 0, void 
                 password
             }
         });
+        console.log(correctCredentials);
         if (!correctCredentials) {
             res.status(304).json({
                 message: "Incorrect Password"
             });
             return;
         }
+        if (!process.env.JWT_SECRET) {
+            throw new Error("JWT_SECRET not set in environment variables");
+        }
+        const token = jsonwebtoken_1.default.sign({ userId: correctCredentials.id }, process.env.JWT_SECRET);
         res.json({
-            token: ""
+            token
         });
     }
     catch (e) {
@@ -110,4 +123,40 @@ exports.userRouter.post('/signup', (req, res) => __awaiter(void 0, void 0, void 
             error: e
         });
     }
+}));
+exports.userRouter.get('/demo', userMiddleware_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    // @ts-ignore
+    const userId = req.userId;
+    console.log(userId);
+    const demoAvailed = yield prisma.user.findFirst({
+        where: {
+            id: userId
+        }
+    });
+    if (demoAvailed === null || demoAvailed === void 0 ? void 0 : demoAvailed.demoAvailed) {
+        res.status(306).json({
+            message: "Demo already availed"
+        });
+        return;
+    }
+    const availDemo = yield prisma.user.update({
+        where: {
+            id: userId
+        },
+        data: {
+            demoAvailed: true
+        }
+    });
+    const apiKey = (0, generate_api_key_1.generateApiKey)();
+    const addApiKey = yield prisma.user.update({
+        where: {
+            id: userId
+        },
+        data: {
+            apiKey: apiKey.toString()
+        }
+    });
+    res.json({
+        message: apiKey
+    });
 }));

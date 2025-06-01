@@ -4,6 +4,8 @@ import {z} from 'zod'
 import { PrismaClient } from '@prisma/client';
 import jwt from "jsonwebtoken"
 import { configDotenv } from 'dotenv';
+import {generateApiKey} from "generate-api-key"
+import { userMiddleware } from '../middlewares/userMiddleware';
 configDotenv()
 const prisma = new PrismaClient()
 
@@ -89,6 +91,7 @@ userRouter.post('/login',async(req,res)=>{
                 password
             }
         })
+        console.log(correctCredentials)
         if(!correctCredentials){
             res.status(304).json({
                 message:"Incorrect Password"
@@ -108,3 +111,43 @@ userRouter.post('/login',async(req,res)=>{
         })
     }
 })
+
+userRouter.get('/demo',userMiddleware,async(req,res)=>{
+    // @ts-ignore
+    const userId = req.userId;
+    console.log(userId)
+    const demoAvailed = await prisma.user.findFirst({
+        where:{
+            id:userId
+        }
+    });
+    
+    if(demoAvailed?.demoAvailed){
+        res.status(306).json({
+            message:"Demo already availed"
+        })
+        return
+    }
+    const availDemo = await prisma.user.update({
+        where:{
+            id:userId
+        },
+        data:{
+            demoAvailed:true
+        }
+    });
+    const apiKey = generateApiKey()
+    const addApiKey = await prisma.user.update({
+        where:{
+            id:userId
+        },
+        data:{
+            apiKey:apiKey.toString()
+        }
+    })
+    res.json({
+        message:apiKey
+    })
+})
+
+
