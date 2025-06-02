@@ -160,3 +160,95 @@ exports.userRouter.get('/demo', userMiddleware_1.userMiddleware, (req, res) => _
         message: apiKey
     });
 }));
+exports.userRouter.post('/apiCall', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log(req.body);
+    const { apiKey } = req.body;
+    try {
+        const userId = yield prisma.user.findFirst({
+            where: {
+                apiKey
+            }
+        });
+        const apiCall = yield prisma.user.update({
+            where: {
+                id: userId === null || userId === void 0 ? void 0 : userId.id
+            },
+            data: {
+                apiCalls: {
+                    decrement: 1
+                }
+            }
+        });
+        res.json({
+            message: "Api call made by user " + (userId === null || userId === void 0 ? void 0 : userId.id)
+        });
+    }
+    catch (e) {
+        res.status(304).json({
+            error: e
+        });
+    }
+}));
+exports.userRouter.get("/getKey", userMiddleware_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    // @ts-ignore
+    const id = req.userId;
+    try {
+        const apiKey = yield prisma.user.findFirst({
+            where: {
+                id
+            }
+        });
+        res.json({
+            key: apiKey === null || apiKey === void 0 ? void 0 : apiKey.apiKey
+        });
+    }
+    catch (e) {
+        res.status(303).json({
+            error: e
+        });
+    }
+}));
+exports.userRouter.post('/remainingCalls', userMiddleware_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    // @ts-ignore
+    const userId = req.userId;
+    const { apiKey } = req.body;
+    try {
+        const validKey = yield prisma.user.findFirst({
+            where: {
+                apiKey
+            }
+        });
+        if (!validKey) {
+            res.status(202).json({
+                message: "Invalid Api Key"
+            });
+            return;
+        }
+    }
+    catch (e) {
+        res.status(305).json({
+            error: e
+        });
+        return;
+    }
+    try {
+        const response = yield prisma.user.findFirst({
+            where: {
+                id: userId
+            },
+            select: {
+                apiCalls: true
+            }
+        });
+        res.json({
+            response
+        });
+        return;
+    }
+    catch (e) {
+        res.status(304).json({
+            error: e
+        });
+        return;
+    }
+}));

@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "apiCalls" INTEGER NOT NULL DEFAULT 5;

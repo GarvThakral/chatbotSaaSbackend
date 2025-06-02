@@ -150,4 +150,100 @@ userRouter.get('/demo',userMiddleware,async(req,res)=>{
     })
 })
 
+userRouter.post('/apiCall',async (req,res)=>{
+    console.log(req.body)
+    const {apiKey} = req.body;
+
+    try{
+        const userId = await prisma.user.findFirst({
+            where:{
+                apiKey
+            }
+        });
+        const apiCall = await prisma.user.update({
+            where:{
+                id:userId?.id
+            },
+            data:{
+                apiCalls:{
+                    decrement:1
+                }
+            }
+        });
+        res.json({
+            message:"Api call made by user " + userId?.id
+        })
+    }catch(e){
+        res.status(304).json({
+            error:e
+        })
+    }
+
+    
+})
+
+userRouter.get("/getKey",userMiddleware,async (req,res)=>{
+    // @ts-ignore
+    const id = req.userId
+    try{
+        const apiKey = await prisma.user.findFirst({
+            where:{
+                id
+            }
+        })
+        res.json({
+            key:apiKey?.apiKey
+        })
+    }catch(e){
+        res.status(303).json({
+            error:e
+        })
+    }
+})
+
+userRouter.post('/remainingCalls',userMiddleware,async (req,res)=>{
+    // @ts-ignore
+    const userId = req.userId;
+    const {apiKey} = req.body;
+    try{
+        const validKey = await prisma.user.findFirst({
+            where:{
+                apiKey
+            }
+        })
+        if(!validKey){
+            res.status(202).json({
+                message:"Invalid Api Key"
+            })
+            return
+        } 
+    }catch(e){
+        res.status(305).json({
+            error:e
+        })
+        return
+
+    }
+    try{
+        const response = await prisma.user.findFirst({
+            where:{
+                id:userId
+            },
+            select:{
+                apiCalls:true
+            }
+        })
+        res.json({
+            response
+        });
+        return
+
+    }catch(e){
+        res.status(304).json({
+            error:e
+        })
+            return
+
+    }
+})
 

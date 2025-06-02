@@ -19,6 +19,6 @@ model User{
   company String
   password String
   apiKey  String?
-  apiCalls Int
+  apiCalls Int    @default(5)
   demoAvailed Boolean @default(false)
 }
