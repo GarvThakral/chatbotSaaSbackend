@@ -286,6 +286,24 @@ exports.userRouter.get('/details', userMiddleware_1.userMiddleware, (req, res) =
         });
     }
 }));
+exports.userRouter.post("/check-email", userMiddleware_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { email } = req.body;
+    try {
+        const response = yield prisma.user.findFirst({
+            where: {
+                email
+            }
+        });
+        res.json({
+            message: "Email already exists"
+        });
+    }
+    catch (e) {
+        res.status(500).json({
+            error: e
+        });
+    }
+}));
 exports.userRouter.post('/sendOtp', userMiddleware_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { phoneNumber } = req.body;
     try {

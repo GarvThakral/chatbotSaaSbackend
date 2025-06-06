@@ -23,7 +23,8 @@ const signupSchema = z.object({
     name:z.string().min(4).max(20),
     email:z.string().email(),
     company:z.string().min(3).max(25),
-    password:z.string().min(8).max(30)
+    password:z.string().min(8).max(30),
+    phone:z.string()
 })
 const signinSchema = z.object({
     email:z.string().email(),
@@ -39,7 +40,7 @@ userRouter.get('/',async (req,res)=>{
 userRouter.post('/signup',async(req,res)=>{
     try{
         const parsedSchema = signupSchema.parse(req.body)
-        const {name , email , company , password} = parsedSchema;
+        const {name , email , company , password , phone} = parsedSchema;
         const emailExists = await prisma.user.findFirst({
             where:{
                 email
@@ -67,7 +68,8 @@ userRouter.post('/signup',async(req,res)=>{
                 name,
                 email,
                 company,
-                password
+                password,
+                phone
             }
         })
         res.json({

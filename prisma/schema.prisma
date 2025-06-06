@@ -24,6 +24,7 @@ model User{
   email   String
   company String
   password String
+  phone    String @default("+911234567890")
   apiKey  String?
   apiCalls Int    @default(5)
   apiCallsUsed Int @default(0)
