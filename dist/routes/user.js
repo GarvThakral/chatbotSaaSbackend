@@ -21,7 +21,14 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const dotenv_1 = require("dotenv");
 const generate_api_key_1 = require("generate-api-key");
 const userMiddleware_1 = require("../middlewares/userMiddleware");
+const twilio_1 = __importDefault(require("twilio"));
 (0, dotenv_1.configDotenv)();
+const accountSid = process.env.accountSid || "";
+const token = process.env.authToken || "";
+console.log(accountSid);
+console.log(token);
+console.log(process.env.TWILIO_VERIFY_SERVICE_SID);
+const client = (0, twilio_1.default)(accountSid, token);
 const prisma = new client_1.PrismaClient();
 const signupSchema = zod_1.z.object({
     name: zod_1.z.string().min(4).max(20),
@@ -176,6 +183,9 @@ exports.userRouter.post('/apiCall', (req, res) => __awaiter(void 0, void 0, void
             data: {
                 apiCalls: {
                     decrement: 1
+                },
+                apiCallsUsed: {
+                    increment: 1
                 }
             }
         });
@@ -249,6 +259,64 @@ exports.userRouter.post('/remainingCalls', userMiddleware_1.userMiddleware, (req
         res.status(304).json({
             error: e
         });
+        return;
+    }
+}));
+exports.userRouter.get('/details', userMiddleware_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    //@ts-ignore
+    const userId = req.userId;
+    try {
+        const userDetails = yield prisma.user.findFirst({
+            where: {
+                id: userId
+            },
+            select: {
+                apiCallsUsed: true,
+                apiKey: true,
+                apiCalls: true,
+                name: true,
+                email: true,
+                company: true,
+            }
+        });
+    }
+    catch (e) {
+        res.status(500).json({
+            error: e
+        });
+    }
+}));
+exports.userRouter.post('/sendOtp', userMiddleware_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { phoneNumber } = req.body;
+    try {
+        const verification = yield client.verify.v2.services(process.env.TWILIO_VERIFY_SERVICE_SID)
+            .verifications.create({ to: phoneNumber, channel: 'sms' });
+        res.status(200).json({ message: 'OTP sent', status: verification.status });
+        return;
+    }
+    catch (error) {
+        console.error('Error sending OTP:', error);
+        res.status(500).json({ message: 'Failed to send OTP', error: error });
+        return;
+    }
+}));
+exports.userRouter.post('/verifyOtp', userMiddleware_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { phoneNumber, otp } = req.body;
+    try {
+        const verificationCheck = yield client.verify.v2.services(process.env.TWILIO_VERIFY_SERVICE_SID)
+            .verificationChecks.create({ to: phoneNumber, code: otp });
+        if (verificationCheck.status === 'approved') {
+            res.status(200).json({ message: 'OTP verified successfully' });
+            return;
+        }
+        else {
+            res.status(400).json({ message: 'Invalid or expired OTP' });
+            return;
+        }
+    }
+    catch (error) {
+        console.error('Error verifying OTP:', error);
+        res.status(500).json({ message: 'OTP verification failed', error: error });
         return;
     }
 }));

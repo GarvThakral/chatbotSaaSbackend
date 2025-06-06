@@ -6,7 +6,17 @@ import jwt from "jsonwebtoken"
 import { configDotenv } from 'dotenv';
 import {generateApiKey} from "generate-api-key"
 import { userMiddleware } from '../middlewares/userMiddleware';
+import twilio  from 'twilio';
+
 configDotenv()
+
+const accountSid: string = process.env.accountSid || "";
+const token: string = process.env.authToken || "";
+console.log(accountSid)
+console.log(token)
+console.log(process.env.TWILIO_VERIFY_SERVICE_SID)
+const client = twilio(accountSid, token);
+
 const prisma = new PrismaClient()
 
 const signupSchema = z.object({
@@ -167,6 +177,9 @@ userRouter.post('/apiCall',async (req,res)=>{
             data:{
                 apiCalls:{
                     decrement:1
+                },
+                apiCallsUsed:{
+                    increment:1
                 }
             }
         });
@@ -247,3 +260,82 @@ userRouter.post('/remainingCalls',userMiddleware,async (req,res)=>{
     }
 })
 
+userRouter.get('/details',userMiddleware,async(req,res)=>{
+    //@ts-ignore
+    const userId = req.userId
+    try{
+        const userDetails = await prisma.user.findFirst({
+            where:{
+                id:userId
+            },
+            select:{
+                apiCallsUsed:true,
+                apiKey:true,
+                apiCalls:true,
+                name:true,
+                email:true,
+                company:true,
+                
+            }
+        })
+    }catch(e){
+        res.status(500).json({
+            error:e
+        })
+    }
+})
+
+userRouter.post("/check-email",userMiddleware,async(req,res)=>{
+    const {email} = req.body;
+    try{
+        const response = await prisma.user.findFirst({
+            where:{
+                email
+            }
+        })
+        res.json({
+            message:"Email already exists"
+        })
+    }catch(e){
+        res.status(500).json({
+            error:e
+        })
+    }
+})
+
+userRouter.post('/sendOtp', userMiddleware, async (req, res) => {
+  const { phoneNumber } = req.body;
+
+  try {
+    const verification = await client.verify.v2.services(process.env.TWILIO_VERIFY_SERVICE_SID!)
+      .verifications.create({ to: phoneNumber, channel: 'sms' });
+
+    res.status(200).json({ message: 'OTP sent', status: verification.status });
+    return
+} catch (error) {
+    console.error('Error sending OTP:', error);
+    res.status(500).json({ message: 'Failed to send OTP', error: error });
+    return 
+    }
+});
+
+userRouter.post('/verifyOtp', userMiddleware, async (req, res) => {
+  const { phoneNumber, otp } = req.body;
+
+  try {
+    const verificationCheck = await client.verify.v2.services(process.env.TWILIO_VERIFY_SERVICE_SID!)
+      .verificationChecks.create({ to: phoneNumber, code: otp });
+
+    if (verificationCheck.status === 'approved') {
+      res.status(200).json({ message: 'OTP verified successfully' });
+      return  
+    } else {
+      res.status(400).json({ message: 'Invalid or expired OTP' });
+        return 
+    }
+  } catch (error) {
+    console.error('Error verifying OTP:', error);
+    res.status(500).json({ message: 'OTP verification failed', error: error });
+    return 
+}
+});

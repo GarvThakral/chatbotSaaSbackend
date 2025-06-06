@@ -12,6 +12,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Plans{
+  Free
+  Growth
+  Enterprise
+}
+
 model User{
   id      Int     @id @default(autoincrement())
   name    String
@@ -20,5 +26,7 @@ model User{
   password String
   apiKey  String?
   apiCalls Int    @default(5)
+  apiCallsUsed Int @default(0)
+  planPurchased Plans @default(Free)
   demoAvailed Boolean @default(false)
 }

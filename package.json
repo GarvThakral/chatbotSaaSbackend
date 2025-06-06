@@ -17,6 +17,7 @@
     "@types/cors": "^2.8.18",
     "@types/express": "^5.0.2",
     "@types/jsonwebtoken": "^9.0.9",
+    "@types/twilio": "^3.19.3",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
@@ -24,6 +25,7 @@
     "generate-api-key": "^1.0.2",
     "jsonwebtoken": "^9.0.2",
     "prisma": "^6.8.2",
+    "twilio": "^5.7.0",
     "typescript": "^5.8.3",
     "zod": "^3.25.42"
   }
